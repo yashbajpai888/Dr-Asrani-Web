@@ -4,7 +4,7 @@ Hello there! This is a Dental Center Management system for ENTNT built with Reac
 
 ## 🔗 Live Demo
 
-Live Site: https://entnt-dental-portal.netlify.app/
+
 
 ## 📂 GitHub Repository
 
