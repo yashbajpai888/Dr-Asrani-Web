@@ -1,4 +1,4 @@
-# ENTNT Dental Center Management Dashboard
+# DR Asrani's Dental Center Management Dashboard
 
 Hello there! This is a Dental Center Management system for ENTNT built with React(frontend-only). It allows an Admin (Dentist) to manage patients and appointments, and lets Patients see their own data. All data is stored in localStorage to simulate a real workflow without any backend.
 
