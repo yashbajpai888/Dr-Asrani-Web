@@ -5,7 +5,9 @@ import Kpi from '../components/kpis/KpiDashboard';
 import PList from '../components/patients/PatientList';
 import AList from '../components/appointments/AppointmentList';
 import Cal from '../components/calendar/CalendarView';
-import { FiGrid, FiUsers, FiCalendar, FiClipboard, FiLogOut } from 'react-icons/fi';
+import Khatabook from './Khatabook';
+import { FiGrid, FiUsers, FiCalendar, FiClipboard, FiLogOut, FiDollarSign } from 'react-icons/fi';
+import { FaMoon, FaSun } from 'react-icons/fa';
 
 const getDoc = () => {
   return JSON.parse(localStorage.getItem('doctor')) || {
@@ -52,6 +54,24 @@ const AdminDash = () => {
   const [now, setNow] = useState(new Date());
   const [today, setToday] = useState(getToday());
   const doc = getDoc();
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+  
+  // Apply theme to document
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+  
+  // Toggle theme function
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 1000);
@@ -75,62 +95,65 @@ const AdminDash = () => {
   const gr = greet(h, doc.name);
 
   return (
-    <div className="min-h-screen relative font-['Poppins']">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-500 to-purple-700 opacity-10 z-0"></div>
+    <div className="min-h-screen relative font-['Poppins'] dental-fade-in">
+      <div className="absolute inset-0 bg-gradient-to-br from-dental-primary via-dental-secondary to-dental-dark opacity-10 z-0"></div>
       <div className="relative z-10 flex flex-col md:flex-row min-h-screen">
-        <aside className="w-full md:w-72 bg-white shadow-xl flex flex-col p-6 space-y-4">
-          <div className="flex flex-col items-center mb-8">
+        <aside className="w-full md:w-72 bg-white shadow-xl flex flex-col p-6 space-y-4 dental-nav">
+          <div className="flex flex-col items-center mb-8 dental-slide-up">
             <div className="relative">
-              <img src={doc.profilePic} alt="Doc" className="w-20 h-20 rounded-full shadow-lg mb-2 object-cover ring-4 ring-blue-100" />
-              <div className="absolute bottom-2 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+              <img src={doc.profilePic} alt="Doc" className="w-20 h-20 rounded-full shadow-dental-lg mb-2 object-cover ring-4 ring-dental-light" />
+              <div className="absolute bottom-2 right-0 w-4 h-4 bg-dental-success rounded-full border-2 border-white"></div>
             </div>
-            <div className="text-xl font-bold text-gray-800">{doc.name}</div>
-            <div className="text-sm font-medium text-gray-600">{doc.role}</div>
-            <div className="text-xs text-gray-500">{doc.email}</div>
+            <div className="text-xl font-bold text-dental-dark">{doc.name}</div>
+            <div className="text-sm font-medium text-dental-secondary">{doc.role}</div>
+            <div className="text-xs text-dental-text">{doc.email}</div>
           </div>
           <div className="space-y-1">
             <SidebarBtn icon={<FiGrid />} text="Dashboard" act={tab === 'dashboard'} click={() => setTab('dashboard')} />
             <SidebarBtn icon={<FiUsers />} text="Patients" act={tab === 'patients'} click={() => setTab('patients')} />
             <SidebarBtn icon={<FiClipboard />} text="Appointments" act={tab === 'appointments'} click={() => setTab('appointments')} />
             <SidebarBtn icon={<FiCalendar />} text="Calendar" act={tab === 'calendar'} click={() => setTab('calendar')} />
+            <SidebarBtn icon={<FiDollarSign />} text="Khatabook" act={tab === 'khatabook'} click={() => setTab('khatabook')} />
           </div>
-          <button onClick={logout} className="flex items-center justify-center gap-3 mt-auto p-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition transform hover:scale-105 shadow">
+          <button onClick={logout} className="dental-btn flex items-center justify-center gap-3 mt-auto p-3 rounded-dental bg-dental-danger hover:bg-red-600 text-white font-semibold transition transform hover:scale-105 shadow-dental">
             <FiLogOut className="text-xl" /> Logout
           </button>
         </aside>
-        <main className="flex-1 p-8 md:p-12 relative overflow-y-auto text-gray-900 bg-gray-50">
+        <main className="flex-1 p-8 md:p-12 relative overflow-y-auto text-dental-text bg-dental-gray">
           <div className="relative z-10 max-w-7xl mx-auto">
             {tab === 'dashboard' && (
-              <div className="space-y-8">
+              <div className="space-y-8 dental-slide-up">
                 <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Welcome, {doc.name.split(' ')[1] || doc.name}</h1>
-                    <p className="text-gray-500 mt-1">{dStr}</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-dental-dark">Welcome, {doc.name.split(' ')[1] || doc.name}</h1>
+                    <p className="text-dental-secondary mt-1">{dStr}</p>
                   </div>
-                  <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow">
+                  <div className="flex items-center space-x-2 bg-white p-2 rounded-dental shadow-dental">
                     {isDay ? (
                       <span className="text-yellow-500">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 17C14.7614 17 17 14.7614 17 12C17 9.23858 14.7614 7 12 7C9.23858 7 7 9.23858 7 12C7 14.7614 9.23858 17 12 17Z" fill="currentColor"/>
-                          <path d="M12 1V3M12 21V23M4.22 4.22L5.64 5.64M18.36 18.36L19.78 19.78M1 12H3M21 12H23M4.22 19.78L5.64 18.36M18.36 5.64L19.78 4.22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
+                        <FaSun />
                       </span>
                     ) : (
-                      <span className="text-indigo-600">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/>
-                        </svg>
+                      <span className="text-dental-primary">
+                        <FaMoon />
                       </span>
                     )}
                     <span className="font-medium">{now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <button 
+                      onClick={toggleTheme} 
+                      className="ml-2 p-1 rounded-full bg-dental-light hover:bg-dental-secondary text-dental-dark hover:text-white transition-colors"
+                      title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+                    >
+                      {theme === 'light' ? <FaMoon size={14} /> : <FaSun size={14} />}
+                    </button>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow">
+                  <div className="dental-dashboard-card">
                     <div className="p-6">
                       <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                        <div className="p-3 rounded-full bg-dental-light text-dental-primary mr-4">
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M17 21V19C17 16.7909 15.2091 15 13 15H5C2.79086 15 1 16.7909 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                             <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -139,40 +162,40 @@ const AdminDash = () => {
                           </svg>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600 font-medium">Total Patients</p>
-                          <p className="text-2xl font-bold text-gray-800">{JSON.parse(localStorage.getItem('patients') || '[]').length}</p>
+                          <p className="dental-dashboard-title">Total Patients</p>
+                          <p className="dental-dashboard-value">{JSON.parse(localStorage.getItem('patients') || '[]').length}</p>
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow">
+                  <div className="dental-dashboard-card">
                     <div className="p-6">
                       <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                        <div className="p-3 rounded-full bg-dental-light text-dental-secondary mr-4">
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                           </svg>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600 font-medium">Today's Appointments</p>
-                          <p className="text-2xl font-bold text-gray-800">{today.length}</p>
+                          <p className="dental-dashboard-title">Today's Appointments</p>
+                          <p className="dental-dashboard-value">{today.length}</p>
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow">
+                  <div className="dental-dashboard-card">
                     <div className="p-6">
                       <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                        <div className="p-3 rounded-full bg-dental-light text-dental-success mr-4">
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                           </svg>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600 font-medium">Completed Appointments</p>
-                          <p className="text-2xl font-bold text-gray-800">
+                          <p className="dental-dashboard-title">Completed Appointments</p>
+                          <p className="dental-dashboard-value">
                             {JSON.parse(localStorage.getItem('appointments') || '[]').filter(a => a.status === 'Completed').length}
                           </p>
                         </div>
@@ -182,30 +205,30 @@ const AdminDash = () => {
                 </div>
                 
                 <div className="mt-8">
-                  <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+                  <div className="dental-card">
                     <div className="p-6">
-                      <h2 className="text-lg font-bold text-gray-800 mb-4">Recent Activity</h2>
+                      <h2 className="dental-dashboard-title mb-4">Recent Activity</h2>
                       <div className="space-y-4">
                         {today.length > 0 ? today.map((appt, i) => {
                           const patient = JSON.parse(localStorage.getItem('patients') || '[]').find(p => p.id === appt.patientId);
                           return (
-                            <div key={i} className="flex items-start p-3 rounded-lg hover:bg-gray-50">
-                              <div className="bg-blue-100 text-blue-600 p-2 rounded-full mr-3">
+                            <div key={i} className="dental-appointment flex items-start p-3 rounded-dental hover:bg-dental-light">
+                              <div className="bg-dental-light text-dental-primary p-2 rounded-full mr-3">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                 </svg>
                               </div>
                               <div>
-                                <p className="font-medium text-gray-800">{patient?.name || 'Unknown Patient'}</p>
-                                <p className="text-sm text-gray-500">{appt.title} - {new Date(appt.appointmentDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p className="dental-appointment-patient">{patient?.name || 'Unknown Patient'}</p>
+                                <p className="dental-appointment-time">{appt.title} - {new Date(appt.appointmentDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
                               </div>
-                              <span className={`ml-auto px-2 py-1 text-xs rounded-full ${appt.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              <span className={`ml-auto px-2 py-1 text-xs rounded-full ${appt.status === 'Completed' ? 'dental-status-success' : 'dental-status-warning'}`}>
                                 {appt.status}
                               </span>
                             </div>
                           );
                         }) : (
-                          <p className="text-gray-500 text-center py-4">No appointments scheduled for today</p>
+                          <p className="text-dental-text text-center py-4">No appointments scheduled for today</p>
                         )}
                       </div>
                     </div>
@@ -216,6 +239,7 @@ const AdminDash = () => {
             {tab === 'patients' && <PList />}
             {tab === 'appointments' && <AList />}
             {tab === 'calendar' && <Cal />}
+            {tab === 'khatabook' && <Khatabook />}
           </div>
         </main>
       </div>

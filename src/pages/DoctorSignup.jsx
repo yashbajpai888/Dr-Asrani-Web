@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDoctor } from '../utils/doctorAuth';
+import { AuthContext } from '../context/AuthContext';
 import './Login.css'; // Reuse login styles for consistency
 
 function DoctorSignup() {
@@ -13,6 +13,7 @@ function DoctorSignup() {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
+  const { register } = useContext(AuthContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,18 +43,15 @@ function DoctorSignup() {
     try {
       setLoading(true);
       
-      // Create doctor object
-      const newDoctor = {
+      // Use the register function from AuthContext
+      await register({
         name,
         email,
         password,
+        role: 'doctor',
         profilePic: profilePic || 'https://img.freepik.com/free-photo/portrait-smiling-handsome-male-doctor-man_171337-5055.jpg?w=400'
-      };
+      });
       
-      // Add doctor to storage
-      await addDoctor(newDoctor);
-      
-      // Show success message and redirect to login
       alert('Registration successful! Please log in.');
       navigate('/');
     } catch (err) {

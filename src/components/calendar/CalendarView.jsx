@@ -139,6 +139,93 @@ const mName = new Date(y, m).toLocaleString('default', { month: 'long' });
                       <div className="text-sm text-brown-600">Status: {a.status}</div>
                       <div className="text-sm text-brown-600">Treatment: {a.treatment}</div>
                       <div className="text-sm text-brown-600">Cost: ₹ {a.cost}</div>
+                      <div className="mt-2 flex justify-end space-x-2">
+                        <button 
+                          onClick={async () => {
+                            try {
+                              // Get all appointments from API
+                              const token = JSON.parse(localStorage.getItem('userInfo'))?.token;
+                              const response = await fetch(`/api/appointments/${a.id}`, {
+                                method: 'GET',
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                }
+                              });
+                              
+                              let appointmentToEdit;
+                              if (response.ok) {
+                                appointmentToEdit = await response.json();
+                              } else {
+                                // Fallback to localStorage if API fails
+                                const allAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+                                appointmentToEdit = allAppointments.find(app => app.id === a.id);
+                              }
+                              
+                              // Store the appointment to edit in localStorage
+                              if (appointmentToEdit) {
+                                localStorage.setItem('editingAppointment', JSON.stringify(appointmentToEdit));
+                                // Navigate to appointments tab with edit mode
+                                window.location.href = '#appointments';
+                                // Trigger edit mode in AppointmentList
+                                const editEvent = new CustomEvent('editAppointment', { detail: { id: a.id } });
+                                window.dispatchEvent(editEvent);
+                                // Close the calendar popup
+                                setSel(null);
+                              }
+                            } catch (error) {
+                              console.error('Error fetching appointment for edit:', error);
+                              alert('Failed to edit appointment. Please try again.');
+                            }
+                          }}
+                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            try {
+                              // Get token from localStorage
+                              const token = JSON.parse(localStorage.getItem('userInfo'))?.token;
+                              
+                              // Update appointment status in MongoDB
+                              const response = await fetch(`/api/appointments/${a.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({
+                                  status: a.status === 'Completed' ? 'Scheduled' : 'Completed'
+                                })
+                              });
+                              
+                              if (response.ok) {
+                                // Update local state
+                                const updatedApps = JSON.parse(localStorage.getItem('appointments') || '[]')
+                                  .map(app => {
+                                    if (app.id === a.id) {
+                                      return {
+                                        ...app,
+                                        status: app.status === 'Completed' ? 'Scheduled' : 'Completed'
+                                      };
+                                    }
+                                    return app;
+                                  });
+                                
+                                localStorage.setItem('appointments', JSON.stringify(updatedApps));
+                                // Refresh the page to show updated status
+                                window.location.reload();
+                              }
+                            } catch (error) {
+                              console.error('Error updating appointment:', error);
+                              alert('Failed to update appointment status');
+                            }
+                          }}
+                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                        >
+                          {a.status === 'Completed' ? 'Mark Scheduled' : 'Mark Completed'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
