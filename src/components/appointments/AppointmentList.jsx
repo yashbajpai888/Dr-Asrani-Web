@@ -10,16 +10,41 @@ const Appts = () => {
   const [showDel, setShowDel] = useState(false);
   const [delId, setDelId] = useState(null);
   const [files, setFiles] = useState([]);
+  const [patientPhone, setPatientPhone] = useState('');
 
   useEffect(() => {
     const savedApts = localStorage.getItem('appointments');
     if (savedApts) {
       setApts(JSON.parse(savedApts));
     }
+    
+    // Add event listener for edit appointment from calendar
+    const handleEditAppointment = (event) => {
+      const { id } = event.detail;
+      editApt(id);
+    };
+    
+    window.addEventListener('editAppointment', handleEditAppointment);
+    
+    // Check for editingAppointment in localStorage
+    const editingAppointment = localStorage.getItem('editingAppointment');
+    if (editingAppointment) {
+      const appointment = JSON.parse(editingAppointment);
+      editApt(appointment.id);
+      localStorage.removeItem('editingAppointment'); // Clear after use
+    }
+    
+    return () => {
+      window.removeEventListener('editAppointment', handleEditAppointment);
+    };
   }, []);
 
   const editApt = (id) => {
     const apt = apts.find(a => a.id === id);
+    if (!apt) {
+      console.error('Appointment not found with ID:', id);
+      return;
+    }
     setEdit(apt);
     setFiles(apt.files || []);
     setShowF(true);
@@ -89,6 +114,40 @@ const Appts = () => {
     }
   };
 
+  const sendWhatsAppNotification = (phone, appointment) => {
+    // Check if appointment is undefined or null
+    if (!appointment || !appointment.appointmentDate) {
+      console.error('Invalid appointment data for WhatsApp notification');
+      return;
+    }
+    
+    // Format the appointment date
+    const appointmentDate = new Date(appointment.appointmentDate);
+    const formattedDate = appointmentDate.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    
+    // Format the appointment time
+    const formattedTime = appointmentDate.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    // Create the message
+    const message = `Dear Patient, your appointment for ${appointment.treatment} has been scheduled at Dr. Asrani Dental Clinic on ${formattedDate} at ${formattedTime}. Please arrive 10 minutes early. For any queries, contact us at 9595956560.`;
+    
+    // Encode the message for URL
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Create WhatsApp URL
+    const whatsappURL = `https://wa.me/${phone}?text=${encodedMessage}`;
+    
+    // Open WhatsApp in a new tab
+    window.open(whatsappURL, '_blank');
+  };
+
   const sub = (e) => {
     e.preventDefault();
     const form = e.target;
@@ -103,26 +162,127 @@ const Appts = () => {
       status: form.status.value,
       nextDate: form.nextDate.value,
       files: files,
+      patientPhone: form.patientPhone.value, // Add patient phone
+      paymentStatus: form.paymentStatus.value, // Add payment status
+      paidAmount: form.paidAmount.value || '0', // Add paid amount
+      pendingAmount: (parseFloat(form.cost.value) - parseFloat(form.paidAmount.value || 0)).toString() // Calculate pending amount
     };
 
+    let savedAppointment;
+    
     if (edit) {
-      const newApts = apts.map(a => {
-        if (a.id === edit.id) {
-          return { ...newApt, id: a.id };
+      // Format the data to match what the backend expects for update
+      const appointmentData = {
+        patient: newApt.patientId,
+        date: newApt.appointmentDate.split('T')[0], // Just the date part
+        time: new Date(newApt.appointmentDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        title: newApt.title,
+        description: newApt.description,
+        treatment: newApt.treatment,
+        status: newApt.status || 'scheduled',
+        cost: newApt.cost,
+        paidAmount: newApt.paidAmount,
+        notes: newApt.notes
+      };
+      
+      // Update existing appointment in database
+      fetch(`/api/appointments/${edit._id || edit.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(appointmentData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Appointment updated in database:', data);
+        // Update local state as fallback
+        const newApts = apts.map(a => {
+          if (a.id === edit.id) {
+            savedAppointment = { ...newApt, id: a.id };
+            return savedAppointment;
+          }
+          return a;
+        });
+        setApts(newApts);
+        localStorage.setItem('appointments', JSON.stringify(newApts));
+      })
+      .catch(error => {
+        console.error('Error updating appointment in database:', error);
+        // Still update localStorage as fallback
+        const newApts = apts.map(a => {
+          if (a.id === edit.id) {
+            savedAppointment = { ...newApt, id: a.id };
+            return savedAppointment;
+          }
+          return a;
+        });
+        setApts(newApts);
+        localStorage.setItem('appointments', JSON.stringify(newApts));
+        
+        // Send WhatsApp notification if phone number is provided (for edit)
+        if (form.patientPhone.value && form.sendWhatsApp.checked) {
+          sendWhatsAppNotification(form.patientPhone.value, savedAppointment);
         }
-        return a;
       });
-      setApts(newApts);
-      localStorage.setItem('appointments', JSON.stringify(newApts));
     } else {
-      const newApts = [...apts, { ...newApt, id: uuidv4() }];
-      setApts(newApts);
-      localStorage.setItem('appointments', JSON.stringify(newApts));
+      // Create new appointment in database
+      // Format the data to match what the backend expects
+      const appointmentData = {
+        patient: newApt.patientId,
+        date: newApt.appointmentDate.split('T')[0], // Just the date part
+        time: new Date(newApt.appointmentDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        title: newApt.title,
+        description: newApt.description,
+        treatment: newApt.treatment,
+        status: newApt.status || 'scheduled',
+        cost: newApt.cost,
+        paidAmount: newApt.paidAmount,
+        notes: newApt.notes
+      };
+      
+      fetch('/api/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(appointmentData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Appointment saved to database:', data);
+        // Update local state with the returned appointment (including MongoDB _id)
+        savedAppointment = data.appointment || { ...newApt, id: uuidv4() };
+        const newApts = [...apts, savedAppointment];
+        setApts(newApts);
+        localStorage.setItem('appointments', JSON.stringify(newApts));
+        
+        // Send WhatsApp notification if phone number is provided (for new appointment)
+        if (form.patientPhone.value && form.sendWhatsApp.checked) {
+          sendWhatsAppNotification(form.patientPhone.value, savedAppointment);
+        }
+      })
+      .catch(error => {
+        console.error('Error saving appointment to database:', error);
+        // Still update localStorage as fallback
+        savedAppointment = { ...newApt, id: uuidv4() };
+        const newApts = [...apts, savedAppointment];
+        setApts(newApts);
+        localStorage.setItem('appointments', JSON.stringify(newApts));
+        
+        // Send WhatsApp notification even if database save fails
+        if (form.patientPhone.value && form.sendWhatsApp.checked) {
+          sendWhatsAppNotification(form.patientPhone.value, savedAppointment);
+        }
+      });
     }
 
     setShowF(false);
     setEdit(null);
     setFiles([]);
+    setPatientPhone('');
   };
 
   const fApts = apts
@@ -155,7 +315,7 @@ const Appts = () => {
 
         <button
           onClick={add}
-          className="fixed bottom-8 right-8 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-lg flex items-center gap-2 px-4 py-2 text-sm font-medium transition duration-200"
+          className="fixed bottom-8 right-8 z-50 dental-btn dental-btn-primary dental-slide-up flex items-center gap-2 px-4 py-2 text-sm font-medium"
           title="Add Appointment"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -192,12 +352,28 @@ const Appts = () => {
                     <textarea name="comments" placeholder="Additional comments" defaultValue={edit?.comments || ''} className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"></textarea>
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Patient Phone</label>
+                    <input type="text" name="patientPhone" placeholder="e.g., 919595956560 (with country code)" defaultValue={edit?.patientPhone || patientPhone} onChange={(e) => setPatientPhone(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Appointment Date</label>
                     <input type="datetime-local" name="appointmentDate" defaultValue={edit?.appointmentDate || ''} className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" required />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
                     <input type="number" name="cost" placeholder="₹0.00" defaultValue={edit?.cost || ''} className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount</label>
+                    <input type="number" name="paidAmount" placeholder="₹0.00" defaultValue={edit?.paidAmount || '0'} className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
+                    <select name="paymentStatus" defaultValue={edit?.paymentStatus || 'pending'} className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                      <option value="pending">Pending</option>
+                      <option value="partial">Partially Paid</option>
+                      <option value="completed">Fully Paid</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Treatment</label>
@@ -224,6 +400,12 @@ const Appts = () => {
                           <button type="button" onClick={() => remFile(i)} className="ml-1 text-red-500 hover:text-red-700" title="Remove file">×</button>
                         </span>))}
                       </div>)}
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="flex items-center">
+                      <input type="checkbox" id="sendWhatsApp" name="sendWhatsApp" defaultChecked className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                      <label htmlFor="sendWhatsApp" className="ml-2 block text-sm text-gray-700">Send WhatsApp notification to patient</label>
+                    </div>
                   </div>
                 </div>
               </div>
